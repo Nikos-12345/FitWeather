@@ -29,7 +29,6 @@
     },
     "plugins": [
       "./plugins/withAndroidWidget",
-      "expo-localization",
       "expo-notifications"    
     ],
     "extra": {

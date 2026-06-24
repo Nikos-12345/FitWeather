@@ -1,3 +1,13 @@
+if (typeof globalThis.DOMException === 'undefined') {
+  // @ts-ignore
+  globalThis.DOMException = class DOMException extends Error {
+    constructor(message?: string, name?: string) {
+      super(message);
+      this.name = name || 'DOMException';
+    }
+  };
+}
+
 import { registerRootComponent } from 'expo';
 
 import App from './App';

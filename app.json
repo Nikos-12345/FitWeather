@@ -28,7 +28,9 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-font"
+      "./plugins/withAndroidWidget",
+      "expo-localization",
+      "expo-notifications"    
     ],
     "extra": {
       "eas": {

@@ -2,6 +2,7 @@ import * as Location from 'expo-location';
 import { appStorage } from '../utils/storage';
 import {useEffect, useState } from 'react';
 import * as Haptics from 'expo-haptics';
+import DefaultPreference from 'react-native-default-preference';
 
 // Actual API key for OpenWeatherMap
 const API_KEY = process.env.EXPO_PUBLIC_WEATHER_API_KEY;
@@ -97,6 +98,27 @@ export const useWeather = () => {
       // store new data in the device for the next time
       appStorage.set('last_weather', weatherData);
       appStorage.set('last_forecast', forecastData.list);
+
+      try {
+        const tempString = `${Math.round(weatherData.main.temp)}°C`;
+        const iconCode = weatherData.weather[0].icon;
+
+        let weatherEmoji = '🌤️';
+        if (iconCode.startsWith('01')) weatherEmoji = '☀️'; 
+        else if (iconCode.startsWith('02') || iconCode.startsWith('03') || iconCode.startsWith('04')) weatherEmoji = '☁️'; 
+        else if (iconCode.startsWith('09') || iconCode.startsWith('10')) weatherEmoji = '🌧️'; 
+        else if (iconCode.startsWith('11')) weatherEmoji = '🌩️'; 
+        else if (iconCode.startsWith('13')) weatherEmoji = '❄️'; 
+        else if (iconCode.startsWith('50')) weatherEmoji = '🌫️'; 
+
+        await DefaultPreference.setName('FitWeatherPrefs');
+        await DefaultPreference.set('widget_city', weatherData.name);
+        await DefaultPreference.set('widget_temp', tempString);
+        await DefaultPreference.set('widget_desc', weatherData.weather[0].description);
+        await DefaultPreference.set('widget_emoji', weatherEmoji);
+      } catch (widgetError) {
+        console.log("Error updating widget preferences:", widgetError);
+      }
 
       } catch (error) {
         console.log(error);

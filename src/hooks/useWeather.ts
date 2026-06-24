@@ -25,10 +25,10 @@ interface WeatherData {
 
 export const useWeather = () => {
     // State to hold weather data
-  const [weather, setWeather] = useState<WeatherData | null>(appStorage.get('last_weather') || null);
-  const [forecast, setForecast] = useState<any[] | null>(appStorage.get('last_forecast') || null);
+  const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [forecast, setForecast] = useState<any[] | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [isloading, setIsLoading] = useState<boolean>(!appStorage.get('last_weather'));
+  const [isloading, setIsLoading] = useState<boolean>(true);
 
   // Pull-to-Refresh
   const [refreshing, setRefreshing] = useState<boolean>(false);
@@ -36,7 +36,7 @@ export const useWeather = () => {
   // Load stored weather if there is no internet cnnection
   const [isOffline, setIsOffline] = useState<boolean>(false);
 
-  const loadCachedWeather = () => {
+  /*const loadCachedWeather = () => {
     try {
       const cachedWeather = appStorage.get('last_weather');
       const cachedForecast = appStorage.get('last_forecast');
@@ -50,7 +50,7 @@ export const useWeather = () => {
     } catch (e) {
       setErrorMsg('Error while reading cache memory.')
     }
-  };
+  };*/
 
   const fetchWeatherData = async () => {
     try {
@@ -100,7 +100,15 @@ export const useWeather = () => {
 
       } catch (error) {
         console.log(error);
-        loadCachedWeather();
+        const cachedWeather = appStorage.get('last_weather');
+        const cachedForecast = appStorage.get('last_forecast');
+        if (cachedWeather && cachedForecast) {
+          setWeather(cachedWeather);
+          setForecast(cachedForecast);
+          setIsOffline(true);
+        } else {
+          setErrorMsg('No internet connection and no stored data found.');
+        }
     } finally {
       setIsLoading(false);
       setRefreshing(false);
@@ -109,6 +117,15 @@ export const useWeather = () => {
 
   // useEffect to fetch weather data on component mount
   useEffect(() => {
+    const cachedWeather = appStorage.get('last_weather');
+    const cachedForecast = appStorage.get('last_forecast');
+
+    if (cachedWeather && cachedForecast) {
+      setWeather(cachedWeather);
+      setForecast(cachedForecast);
+      setIsLoading(false);
+    }
+    
     fetchWeatherData();
   }, []);
 

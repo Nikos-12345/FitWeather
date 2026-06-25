@@ -1,3 +1,9 @@
+import * as Sentry from '@sentry/react-native';
+Sentry.init({
+  dsn: 'https://0d14a4fdfc72f4d61a3d4770f1a8a37b@o4511624903196672.ingest.de.sentry.io/4511624914075728',
+  tracesSampleRate: 1.0,
+});
+
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { ScrollView, StyleSheet, Text, View, RefreshControl, Animated } from 'react-native';
@@ -23,7 +29,7 @@ Notifications.setNotificationHandler({
   }),
 });
 
-export default function App() {
+function App() {
   const { weather, forecast, isloading, errorMsg, refreshing, isOffline, onRefresh } = useWeather();
 
   // Animation
@@ -162,3 +168,5 @@ const styles = StyleSheet.create({
   offlineBanner: { flexDirection: 'row', backgroundColor: "#fef3c7", padding: 10, borderRadius: 8, alignItems: 'center', marginBottom: 15 },
   offlineText: { color: "#d97706", fontSize: 13, fontWeight: 'bold' }
 });
+
+export default Sentry.wrap(App);

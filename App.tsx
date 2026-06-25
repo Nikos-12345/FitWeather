@@ -11,6 +11,7 @@ import React, { useRef, useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Notifications from 'expo-notifications';
 import { getAnalytics, logEvent } from '@react-native-firebase/analytics';
+import { LinearGradient } from 'expo-linear-gradient'; 
 
 import { useWeather } from './src/hooks/useWeather';
 import { getWorkoutVerdict } from './src/utils/workoutLogic';
@@ -86,7 +87,7 @@ function App() {
   }, [isloading, weather, forecast]);
   
 
-  // Loading state (while waiting GPS and API responce)
+  // Loading state (while waiting GPS and API response)
   if (isloading) {
     return <LoadingScreen isDarkMode={isDarkMode}/>;
   }
@@ -112,73 +113,78 @@ function App() {
   } 
 
   // Compute wind speed in (from m/s to Km/h)
-  const windSpeedKmH = Math.round(weather.wind.speed *3.6);
+  const windSpeedKmH = Math.round(weather.wind.speed * 3.6);
   const baseVerdict = getWorkoutVerdict(weather.main.temp, windSpeedKmH, weather.weather[0].main);
 
   const verdict = {
     ...baseVerdict,
-    text: aiAdvice
+    message: aiAdvice
   };
   
-  // Main content (if weather data is available)
+  const backgroundColors: [string, string, string] = isDarkMode 
+    ? ['#0f172a', '#1e1b4b', '#020617'] 
+    : ['#e0f2fe', '#f8fafc', '#fae8ff'];
+
   return (
-    <SafeAreaView style={[styles.container, isDarkMode && styles.containerDark]}>
-      <StatusBar style={isDarkMode ? "light" : "dark"} />
-      <ScrollView 
-        contentContainerStyle={styles.scrollContainer} 
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={isDarkMode ? "#f8fafc" : "#1e293b"}
-          /> 
-        }
-      >
+    <LinearGradient colors={backgroundColors} style={styles.container}>
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar style={isDarkMode ? "light" : "dark"} />
+        <ScrollView 
+          contentContainerStyle={styles.scrollContainer} 
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={isDarkMode ? "#f8fafc" : "#1e293b"}
+            /> 
+          }
+        >
+          <Animated.View style={{ opacity: fadeAnimation }}>
 
-      <Animated.View style={{ opacity: fadeAnimation}}>
+            {/* Header with live location */}
+            <View style={styles.header}>
+              <Text style={[styles.appTitle, isDarkMode && styles.textPrimaryDark]}>FitWeather</Text>
+              <View style={styles.locationRow}>
+                <Ionicons name="location-sharp" size={25} color="#0ea5e9" />
+                <Text style={[styles.locationText, isDarkMode && styles.textSecondaryDark]}>{weather.name}</Text>
+              </View>
+            </View>
 
-        {/* Header with live location */}
-        <View style={styles.header}>
-          <Text style={[styles.appTitle, isDarkMode && styles.textPrimaryDark]}>FitWeather</Text>
-          <View style={styles.locationRow}>
-            <Ionicons name="location-sharp" size={25} color="#0ea5e9" />
-            <Text style={[styles.locationText, isDarkMode && styles.textSecondaryDark]}>{weather.name}</Text>
-          </View>
-        </View>
+            {/* if no internet connection we see stored data */}
+            {isOffline && (
+              <View style={styles.offlineBanner}>
+                <Ionicons name="cloud-offline" size={16} color="#d97706" style={{marginRight: 6}} />
+                <Text style={styles.offlineText}>Offline Mode: Showing last saved weather data</Text>
+              </View>
+            )}
 
-        {/* if no internet connection we see stored data */}
-        {isOffline && (
-          <View style={styles.offlineBanner}>
-            <Ionicons name="cloud-offline" size={16} color="#d97706" style={{marginRight: 6}} />
-            <Text style={styles.offlineText}>Offline Mode: Showing last saved weather data</Text>
-          </View>
-        )}
+            {/* Workout Verdict Card (Now Frosted Glass!) */}
+            <VerdictCard verdict={verdict} isDarkMode={isDarkMode} />
 
-        {/* Workout Verdict Card */}
-        <VerdictCard verdict={verdict} isDarkMode={isDarkMode} />
+            {/* Smart weather forecast */}
+            <RestdayCard forecast={forecast} isDarkMode={isDarkMode}/>
 
-        {/* Smart weather forecast */}
-        <RestdayCard forecast={forecast} isDarkMode={isDarkMode}/>
+            {/* Live Weather Details section*/}
+            <WetaherStats
+              temperature={weather.main.temp}
+              description={weather.weather[0].description}
+              windSpeedKmH={windSpeedKmH}
+              humidity={weather.main.humidity}
+              isDarkMode={isDarkMode}
+            />
 
-        {/* Live Weather Details section*/}
-        <WetaherStats
-          temperature={weather.main.temp}
-          description={weather.weather[0].description}
-          windSpeedKmH={windSpeedKmH}
-          humidity={weather.main.humidity}
-          isDarkMode={isDarkMode}
-        />
-
-      </Animated.View>
-      </ScrollView>
-    </SafeAreaView>
+          </Animated.View>
+        </ScrollView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f4f7fb' },
-  centerContent: {justifyContent: 'center', alignItems: 'center', padding: 20 },
+  container: { flex: 1 },
+  safeArea: { flex: 1 },
+  centerContent: { justifyContent: 'center', alignItems: 'center', padding: 20 },
   loadingText: { color: '#64748B', fontSize: 16, marginTop: 10, fontWeight: '500' },
   errorText: { color: '#ef4444', fontSize: 16, marginTop: 15, textAlign: 'center', fontWeight: '500' },
   scrollContainer: { padding: 20 },
@@ -187,13 +193,13 @@ const styles = StyleSheet.create({
   locationRow: { flexDirection: 'row', alignItems: 'center', marginTop: 5 },
   locationText: { color: '#64748B', fontSize: 20, marginLeft: 5, fontWeight: '600' },
 
-  // DARK MODE 
-  containerDark: {backgroundColor: '#0f172a' },
-  textPrimaryDark: {color: '#F8FAFC' },
+  // DARK MODE VARIABLES
+  containerDark: { backgroundColor: '#0f172a' },
+  textPrimaryDark: { color: '#F8FAFC' },
   textSecondaryDark: { color: '#94A3B8' },
 
   // Offline-Mode
-  offlineBanner: { flexDirection: 'row', backgroundColor: "#fef3c7", padding: 10, borderRadius: 8, alignItems: 'center', marginBottom: 15 },
+  offlineBanner: { flexDirection: 'row', backgroundColor: "rgba(254, 243, 199, 0.8)", padding: 10, borderRadius: 8, alignItems: 'center', marginBottom: 15 },
   offlineText: { color: "#d97706", fontSize: 13, fontWeight: 'bold' }
 });
 

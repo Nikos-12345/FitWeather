@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
     headerRow: { 
         flexDirection: 'row', 
         alignItems: 'center', 
-        marginBottom: 15 
+        marginBottom: 20 
     },
     iconWrapper: { 
         backgroundColor: '#EDE9FE', 
@@ -70,19 +70,19 @@ const styles = StyleSheet.create({
     },
     contentRow: { 
         flexDirection: 'row', 
-        alignItems: 'center' 
+        alignItems: 'flex-start',
+        gap: 12 
     },
     dateBadge: { 
         backgroundColor: '#8B5CF6', 
-        paddingVertical: 8, 
-        paddingHorizontal: 16, 
-        borderRadius: 16, 
-        marginRight: 15 
+        paddingVertical: 6, 
+        paddingHorizontal: 12, 
+        borderRadius: 12, 
     },
     dateText: { 
         color: '#ffffff', 
         fontWeight: '900', 
-        fontSize: 16 
+        fontSize: 14 
     },
     reasonText: { 
         flex: 1, 

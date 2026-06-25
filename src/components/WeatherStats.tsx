@@ -86,14 +86,14 @@ const styles = StyleSheet.create({
     marginLeft: 20 
   },
   mainTemperature: { 
-    color: '#1E293B', 
-    fontSize: 32, 
+    color: '#0f172a', 
+    fontSize: 30, 
     fontWeight: 'bold' 
   },
   mainCondition: { 
     color: '#64748B', 
     fontSize: 18, 
-    marginTop: 2,
+    marginTop: 0,
     textTransform: 'capitalize'
   },
   sectionTitle: { 
@@ -112,13 +112,13 @@ const styles = StyleSheet.create({
   },
   smallCardInner: { 
     alignItems: 'center', 
-    paddingVertical: 8 
+    paddingVertical: 5 
   },
   wideCardInner: { 
     flexDirection: 'row', 
     alignItems: 'center', 
     justifyContent: 'space-between', 
-    paddingVertical: 5 
+    paddingVertical: 10 
   },
   wideCardLeft: { 
     flexDirection: 'row', 
@@ -132,18 +132,18 @@ const styles = StyleSheet.create({
   },
   statLabel: { 
     color: '#64748b', 
-    fontSize: 13, 
+    fontSize: 12, 
     marginTop: 8, 
     marginBottom: 4, 
     fontWeight: '600' 
   },
   statValue: { 
     color: '#0f172a', 
-    fontSize: 16, 
+    fontSize: 14, 
     fontWeight: '800' 
   },
   unitText: { 
-    fontSize: 14, 
+    fontSize: 16, 
     color: '#94a3b8', 
     fontWeight: '600' 
   },

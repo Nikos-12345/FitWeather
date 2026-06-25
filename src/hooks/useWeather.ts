@@ -37,22 +37,6 @@ export const useWeather = () => {
   // Load stored weather if there is no internet cnnection
   const [isOffline, setIsOffline] = useState<boolean>(false);
 
-  /*const loadCachedWeather = () => {
-    try {
-      const cachedWeather = appStorage.get('last_weather');
-      const cachedForecast = appStorage.get('last_forecast');
-      if (cachedWeather && cachedForecast) {
-        setWeather(cachedWeather);
-        setForecast(cachedForecast);
-        setIsOffline(true);
-        } else {
-        setErrorMsg('No internet connection and no stored data found.')
-      }
-    } catch (e) {
-      setErrorMsg('Error while reading cache memory.')
-    }
-  };*/
-
   const fetchWeatherData = async () => {
     try {
       let {status} = await Location.requestForegroundPermissionsAsync();
@@ -61,7 +45,17 @@ export const useWeather = () => {
         return ;
       }
 
-      let location = await Location.getCurrentPositionAsync({});
+      let location = await Location.getLastKnownPositionAsync({});
+      if (!location) {
+        location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+      }
+
+      if (!location) {
+        throw new Error('Could not retrieve device location.');
+      }
+
       const {latitude, longitude} = location.coords;
 
       if (!API_KEY) {
@@ -129,7 +123,8 @@ export const useWeather = () => {
           setForecast(cachedForecast);
           setIsOffline(true);
         } else {
-          setErrorMsg('No internet connection and no stored data found.');
+          const errorMessage = error instanceof Error ? error.message : 'Network request failed';
+          setErrorMsg(`Error: ${errorMessage}`);        
         }
     } finally {
       setIsLoading(false);

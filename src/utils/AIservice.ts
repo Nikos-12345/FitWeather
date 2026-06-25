@@ -34,6 +34,6 @@ export async function generateAIVerdict(currentWeather: any, forecastData: any):
       return result.response.text();
     } catch (error) {
         console.error('Gemini API Error:', error);
-        return "The AI coach ran into a small network glitch! Check the stats be;ow and make your own call for today's workout. Let's go hard!";
+        return "The AI coach ran into a small network glitch! Check the stats below and make your own call for today's workout. Let's go hard!";
     }
 }

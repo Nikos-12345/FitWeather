@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
     marginBottom: 15 
   },
   iconCircleDark: { 
-    backgroundColor: 'rgba(51, 65, 85, 0.5)' 
+    backgroundColor: '#334155' 
   },
   verdictTitle: { 
     color: '#64748B', 
@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
     fontSize: 21, 
     fontWeight: '800', 
     textAlign: 'center', 
-    lineHeight: 30 
+    lineHeight: 24 
   },
   textPrimaryDark: { 
     color: '#F8FAFC' 

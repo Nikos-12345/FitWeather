@@ -19,6 +19,7 @@ import { WetaherStats } from './src/components/WeatherStats';
 import { RestdayCard } from './src/components/RestDayCard';
 import { LoadingScreen } from './src/components/LoadingScreen';
 import { registerForPushNotificationsAsync, scheduleDailyWeatherCheck } from './src/utils/notificationService';
+import { generateAIVerdict } from './src/utils/AIservice';
 
 Notifications.setNotificationHandler({ 
   handleNotification: async () => ({
@@ -38,6 +39,8 @@ function App() {
 
   const currentHour = new Date().getHours();
   const isDarkMode = currentHour >= 19 || currentHour < 7;
+  const [aiAdvice, setAiAdvice] = React.useState<string>('The AI coach is analyzing the weather data...');
+  const [isAiLoading, setIsAiLoading] = React.useState<boolean>(false);
 
   useEffect(() => {
     if (!isloading && weather) {
@@ -69,6 +72,18 @@ function App() {
       initNotifications();
     }
   }, [forecast, isloading]);
+
+  React.useEffect(() => {
+    const fetchAIVerdict = async () => {
+      if (!isloading && weather && forecast) {
+        setIsAiLoading(true);
+        const advice = await generateAIVerdict(weather, forecast);
+        setAiAdvice(advice);
+        setIsAiLoading(false);
+      }
+    };
+    fetchAIVerdict();
+  }, [isloading, weather, forecast]);
   
 
   // Loading state (while waiting GPS and API responce)
@@ -98,8 +113,13 @@ function App() {
 
   // Compute wind speed in (from m/s to Km/h)
   const windSpeedKmH = Math.round(weather.wind.speed *3.6);
-  const verdict = getWorkoutVerdict(weather.main.temp, windSpeedKmH, weather.weather[0].main);
+  const baseVerdict = getWorkoutVerdict(weather.main.temp, windSpeedKmH, weather.weather[0].main);
 
+  const verdict = {
+    ...baseVerdict,
+    text: aiAdvice
+  };
+  
   // Main content (if weather data is available)
   return (
     <SafeAreaView style={[styles.container, isDarkMode && styles.containerDark]}>

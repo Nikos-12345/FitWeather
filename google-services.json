@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1011561040868",
+    "project_id": "fitweather-3c373",
+    "storage_bucket": "fitweather-3c373.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1011561040868:android:bb9e1e2d9a24f0ad37d5f1",
+        "android_client_info": {
+          "package_name": "com.nikoskon.FitWeather"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC0maYxA42k7gWeGFgMdMU8D9RfqGIcgHQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

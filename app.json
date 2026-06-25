@@ -22,7 +22,8 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.nikoskon.FitWeather"
+      "package": "com.nikoskon.FitWeather",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -30,6 +31,7 @@
     "plugins": [
       "./plugins/withAndroidWidget",
       "expo-notifications",
+      "@react-native-firebase/app",
       [
         "@sentry/react-native/expo",
         {
@@ -37,7 +39,9 @@
           "organization": "konstantinidis",
           "project": "fitweather-app"
         }
-      ]
+      ],
+      "@react-native-firebase/app",
+      "@react-native-firebase/analytics"
     ],
     "extra": {
       "eas": {

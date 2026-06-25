@@ -10,6 +10,7 @@ import { ScrollView, StyleSheet, Text, View, RefreshControl, Animated } from 're
 import React, { useRef, useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Notifications from 'expo-notifications';
+import { getAnalytics, logEvent } from '@react-native-firebase/analytics';
 
 import { useWeather } from './src/hooks/useWeather';
 import { getWorkoutVerdict } from './src/utils/workoutLogic';
@@ -45,6 +46,13 @@ function App() {
         duration: 800,
         useNativeDriver: true,
       }).start();
+
+      const analyticsInstance = getAnalytics();
+      logEvent(analyticsInstance, 'weather_loaded_successfully', {
+        city: weather.name,
+        temperature: Math.round(weather.main.temp),
+        condition: weather.weather[0].main
+      });
     }
   }, [isloading, weather]);
 

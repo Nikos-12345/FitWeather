@@ -7,11 +7,12 @@ Sentry.init({
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { ScrollView, StyleSheet, Text, View, RefreshControl, Animated } from 'react-native';
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Notifications from 'expo-notifications';
 import { getAnalytics, logEvent } from '@react-native-firebase/analytics';
 import { LinearGradient } from 'expo-linear-gradient'; 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useWeather } from './src/hooks/useWeather';
 import { getWorkoutVerdict } from './src/utils/workoutLogic';
@@ -21,6 +22,10 @@ import { RestdayCard } from './src/components/RestDayCard';
 import { LoadingScreen } from './src/components/LoadingScreen';
 import { registerForPushNotificationsAsync, scheduleDailyWeatherCheck } from './src/utils/notificationService';
 import { generateAIVerdict } from './src/utils/AIservice';
+import OnboardingScreen, { UserProfile } from './src/components/OnboardingScreen';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth } from './src/utils/firebaseConfig';
+import AuthScreen from './src/components/AuthScreen';
 
 Notifications.setNotificationHandler({ 
   handleNotification: async () => ({
@@ -33,6 +38,14 @@ Notifications.setNotificationHandler({
 });
 
 function App() {
+  // Authentication states
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isAuthChecking, setIsAuthChecking] = useState<boolean>(true);
+
+  // States for onboarding
+  const [hasCompletedOnboarding, sethasCompletedOnboarding] = useState<boolean>(false);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [isCheckingStorage, setisCheckingStorage] = useState<boolean>(true);
   const { weather, forecast, isloading, errorMsg, refreshing, isOffline, onRefresh } = useWeather();
 
   // Animation
@@ -42,6 +55,32 @@ function App() {
   const isDarkMode = currentHour >= 19 || currentHour < 7;
   const [aiAdvice, setAiAdvice] = React.useState<string>('The AI coach is analyzing the weather data...');
   const [isAiLoading, setIsAiLoading] = React.useState<boolean>(false);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+      setIsAuthChecking(false);
+    });
+
+    return unsubscribe; 
+  }, []);
+
+  useEffect (() => {
+    const checkOnboardingStatus = async () => {
+      try {
+        const storedProfile = await AsyncStorage.getItem('@user_profile');
+        if (storedProfile !== null) {
+          setUserProfile(JSON.parse(storedProfile));
+          sethasCompletedOnboarding(true);
+        }
+      } catch (error) {
+        console.error("Error reading AsyncStorage:", error);
+      } finally {
+        setisCheckingStorage(false);
+      }
+    };
+    checkOnboardingStatus();
+  }, []);
 
   useEffect(() => {
     if (!isloading && weather) {
@@ -76,16 +115,43 @@ function App() {
 
   React.useEffect(() => {
     const fetchAIVerdict = async () => {
-      if (!isloading && weather && forecast) {
+      if (!isloading && weather && forecast && hasCompletedOnboarding && userProfile) {
         setIsAiLoading(true);
-        const advice = await generateAIVerdict(weather, forecast);
+        const advice = await generateAIVerdict(weather, forecast, userProfile);
         setAiAdvice(advice);
         setIsAiLoading(false);
       }
     };
     fetchAIVerdict();
-  }, [isloading, weather, forecast]);
-  
+  }, [isloading, weather, forecast, hasCompletedOnboarding, userProfile]);
+
+  if (isAuthChecking) {
+    return <LoadingScreen isDarkMode={isDarkMode}/>;
+  }
+
+  if (!currentUser) {
+    return <AuthScreen />;
+  }
+
+  if (isCheckingStorage) {
+    return <LoadingScreen isDarkMode={isDarkMode}/>;
+  }
+
+  if (!hasCompletedOnboarding) {
+    return (
+      <OnboardingScreen 
+        onComplete={async (profile) => {
+          try {
+            await AsyncStorage.setItem('@user_profile', JSON.stringify(profile));
+            setUserProfile(profile);
+            sethasCompletedOnboarding(true);
+          } catch (error) {
+            console.error("Error saving to AsyncStorage:", error);
+          }
+        }} 
+      />
+    );
+  }
 
   // Loading state (while waiting GPS and API response)
   if (isloading) {
@@ -159,7 +225,7 @@ function App() {
               </View>
             )}
 
-            {/* Workout Verdict Card (Now Frosted Glass!) */}
+            {/* Workout Verdict Card */}
             <VerdictCard verdict={verdict} isDarkMode={isDarkMode} />
 
             {/* Smart weather forecast */}

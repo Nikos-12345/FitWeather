@@ -3,7 +3,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 const API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(API_KEY || '');
 
-export async function generateAIVerdict(currentWeather: any, forecastData: any): Promise<string> {
+export async function generateAIVerdict(currentWeather: any, forecastData: any, userProfile?: any): Promise<string> {
     try {
         if (!API_KEY) {
             throw new Error("Missing Gemini API key in environment variables.");
@@ -16,9 +16,15 @@ export async function generateAIVerdict(currentWeather: any, forecastData: any):
             return `${time}: ${Math.round(f.main.temp)}°C, ${f.weather[0].description}`;        
         }).join('\n') || 'No forecast data available.';
 
+        const workouts = userProfile?.selectedWorkouts?.join(', ') || 'general fitness';
+        const frequency = userProfile?.weeklyFrequency || 'a few times a week';
+
         const promt = `
           You are the "FitWeather Coach", an experienced personal trainer and outdoor fitness coach.
-          I am giving you the current weather data and the hourly forecast for the user's city.
+      
+          [USER FITNESS PROFILE]
+          - Goal: Trains ${frequency}.
+          - Preferred Workouts: ${workouts}.
       
           [CURRENT TIME]: ${currentTimeString}
           [CURRENT WEATHER]: ${Math.round(currentWeather.main.temp)}°C, ${currentWeather.weather[0].description}, Humidity: ${currentWeather.main.humidity}%, Wind: ${Math.round(currentWeather.wind.speed * 3.6)} km/h.
@@ -28,9 +34,11 @@ export async function generateAIVerdict(currentWeather: any, forecastData: any):
       
           INSTRUCTIONS:
           1. Write a short, smart, and highly motivating workout advice (strictly 2-3 sentences) in English.
-          2. Your tone must be friendly, athletic, cool, and direct (feel free to use slang/words like "bro", "let's go", "push hard", "beast mode").
-          3. CRITICAL: Analyze the CURRENT TIME and current temperature compared to the UPCOMING FORECAST. Dynamically suggest whether to train outside RIGHT NOW, go to an indoor gym instead if the weather/heat is going to worsen, or wait for a specific better hour later in the day (e.g. if it's morning and the temperature will spike later, suggest gym now or waiting until evening around 18:00/20:00 when it cools down for perfect outdoor cardio and sunset vibes).
-          4. Do not use any markdown formatting at all (no asterisks **, hashtags, or bold text). Return ONLY clean, raw text.
+          2. PERSONALIZATION IS CRITICAL: Tailor your advice SPECIFICALLY to the user's preferred workouts (${workouts}). If they like Running or Calisthenics, focus heavily on the outdoor conditions. If they chose Weightlifting/Gym, tell them to hit the indoor gym if the weather outside is bad.
+          3. Analyze the CURRENT TIME and temperature compared to the UPCOMING FORECAST. Dynamically suggest whether to train RIGHT NOW or wait for a better hour later in the day.
+          4. Acknowledge their training frequency (${frequency}) to push them appropriately.
+          5. Your tone must be friendly, athletic, cool, and direct (use slang like "bro", "let's go", "push hard", "beast mode").
+          6. Do not use any markdown formatting at all (no asterisks **, hashtags, or bold text). Return ONLY clean, raw text.
         `;
 
         const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });

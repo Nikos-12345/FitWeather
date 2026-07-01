@@ -1,12 +1,11 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View, RefreshControl, Animated } from 'react-native';
+import { ScrollView, StyleSheet, Text, View, RefreshControl, Animated, TouchableOpacity, Modal, TextInput, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as Notifications from 'expo-notifications';
-import { getAnalytics, logEvent } from '@react-native-firebase/analytics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getAuth } from 'firebase/auth';
 
 import { useWeather } from '../hooks/useWeather';
 import { getWorkoutVerdict } from '../utils/workoutLogic';
@@ -15,6 +14,7 @@ import { WetaherStats } from './WeatherStats';
 import { LoadingScreen } from './LoadingScreen';
 import { registerForPushNotificationsAsync, scheduleDailyWeatherCheck } from '../utils/notificationService';
 import { generateAIVerdict } from '../utils/AIservice';
+import { logWorkoutSession } from '../utils/dbService';
 
 export default function HomeScreen() {
   const [userProfile, setUserProfile] = useState<any>(null);
@@ -23,10 +23,17 @@ export default function HomeScreen() {
   const [aiAdvice, setAiAdvice] = useState<string>('The AI coach is analyzing the weather data...');
   const [isAiLoading, setIsAiLoading] = useState<boolean>(false);
 
+  // States για το Log Workout Modal
+  const [isModalVisible, setModalVisible] = useState(false);
+  const [workoutDuration, setWorkoutDuration] = useState('');
+  const [selectedLogCategory, setSelectedLogCategory] = useState('Cardio');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const logCategories = ['Cardio', 'Strength', 'Flexibility', 'Functional', 'Other'];
+
   const currentHour = new Date().getHours();
   const isDarkMode = currentHour >= 19 || currentHour < 7;
 
-  // Φορτώνουμε το προφίλ από το AsyncStorage για να το έχει έτοιμο το AI
   useEffect(() => {
     const loadProfile = async () => {
       try {
@@ -48,13 +55,6 @@ export default function HomeScreen() {
         duration: 800,
         useNativeDriver: true,
       }).start();
-
-      const analyticsInstance = getAnalytics();
-      logEvent(analyticsInstance, 'weather_loaded_successfully', {
-        city: weather.name,
-        temperature: Math.round(weather.main.temp),
-        condition: weather.weather[0].main
-      });
     }
   }, [isloading, weather]);
 
@@ -82,24 +82,36 @@ export default function HomeScreen() {
     fetchAIVerdict();
   }, [isloading, weather, forecast, userProfile]);
 
-  if (isloading) {
-    return <LoadingScreen isDarkMode={isDarkMode} />;
-  }
+  const handleLogWorkout = async () => {
+    if (!workoutDuration || isNaN(Number(workoutDuration)) || Number(workoutDuration) <= 0) {
+      Alert.alert('Invalid Input', 'Please enter a valid number of minutes.');
+      return;
+    }
 
-  if (errorMsg || !weather) {
+    setIsSubmitting(true);
+    const auth = getAuth();
+    const user = auth.currentUser;
+
+    if (user) {
+      const success = await logWorkoutSession(user.uid, selectedLogCategory, Number(workoutDuration));
+      if (success) {
+        Alert.alert('Success!', 'Workout logged. Keep grinding!');
+        setModalVisible(false);
+        setWorkoutDuration(''); 
+      } else {
+        Alert.alert('Error', 'Could not save the workout. Try again.');
+      }
+    }
+    setIsSubmitting(false);
+  };
+
+  if (isloading) return <LoadingScreen isDarkMode={isDarkMode} />;
+  
+  if (errorMsg || !weather || !weather.wind) {
     return (
       <View style={[styles.container, isDarkMode && styles.containerDark, styles.centerContent]}>
         <Ionicons name="warning-outline" size={50} color="#ef4444"/>
-        <Text style={styles.errorText}>{errorMsg || "Something went wrong"}</Text>
-      </View>
-    );
-  }
-
-  if (!weather || !weather.wind) {
-    return (
-      <View style={[styles.container, isDarkMode && styles.containerDark, styles.centerContent]}>
-        <Ionicons name="warning-outline" size={50} color="#ef4444"/>
-        <Text style={styles.errorText}>Data error. Drag down to refresh.</Text>
+        <Text style={styles.errorText}>{errorMsg || "Data error. Drag down to refresh."}</Text>
       </View>
     );
   }
@@ -119,13 +131,7 @@ export default function HomeScreen() {
         <ScrollView 
           contentContainerStyle={styles.scrollContainer} 
           showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={isDarkMode ? "#f8fafc" : "#1e293b"}
-            /> 
-          }
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={isDarkMode ? "#f8fafc" : "#1e293b"} />}
         >
           <Animated.View style={{ opacity: fadeAnimation }}>
             <View style={styles.header}>
@@ -144,16 +150,67 @@ export default function HomeScreen() {
             )}
 
             <VerdictCard verdict={verdict} isDarkMode={isDarkMode} />
-            <WetaherStats
-              temperature={weather.main.temp}
-              description={weather.weather[0].description}
-              windSpeedKmH={windSpeedKmH}
-              humidity={weather.main.humidity}
-              isDarkMode={isDarkMode}
-            />
+            <WetaherStats temperature={weather.main.temp} description={weather.weather[0].description} windSpeedKmH={windSpeedKmH} humidity={weather.main.humidity} isDarkMode={isDarkMode} />
+
+            {/* Add a workout button */}
+            <TouchableOpacity 
+              style={[styles.logButton, isDarkMode ? styles.logButtonDark : styles.logButtonLight]} 
+              onPress={() => setModalVisible(true)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="add-circle" size={24} color="#FFF" style={{ marginRight: 8 }} />
+              <Text style={styles.logButtonText}>Log Workout</Text>
+            </TouchableOpacity>
+
           </Animated.View>
         </ScrollView>
       </SafeAreaView>
+
+      {/* Modal for workout logging */}
+      <Modal visible={isModalVisible} animationType="slide" transparent={true}>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.modalOverlay}>
+          <View style={[styles.modalContent, isDarkMode ? styles.modalDark : styles.modalLight]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, isDarkMode ? styles.textPrimaryDark : styles.textPrimaryLight]}>Record Session</Text>
+              <TouchableOpacity onPress={() => setModalVisible(false)}>
+                <Ionicons name="close-circle" size={28} color={isDarkMode ? "#64748B" : "#94A3B8"} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={[styles.modalLabel, isDarkMode ? styles.textSecondaryDark : styles.textSecondaryLight]}>1. Select Category</Text>
+            <View style={styles.chipContainer}>
+              {logCategories.map(cat => (
+                <TouchableOpacity 
+                  key={cat} 
+                  style={[styles.chip, selectedLogCategory === cat && (isDarkMode ? styles.chipActiveDark : styles.chipActiveLight)]}
+                  onPress={() => setSelectedLogCategory(cat)}
+                >
+                  <Text style={[styles.chipText, selectedLogCategory === cat && styles.chipTextActive]}>{cat}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={[styles.modalLabel, isDarkMode ? styles.textSecondaryDark : styles.textSecondaryLight]}>2. Duration (Minutes)</Text>
+            <TextInput
+              style={[styles.input, isDarkMode ? styles.inputDark : styles.inputLight]}
+              placeholder="e.g. 45"
+              placeholderTextColor="#94A3B8"
+              keyboardType="numeric"
+              value={workoutDuration}
+              onChangeText={setWorkoutDuration}
+              maxLength={3}
+            />
+
+            <TouchableOpacity 
+              style={[styles.submitButton, isDarkMode ? styles.submitButtonDark : styles.submitButtonLight, isSubmitting && { opacity: 0.7 }]} 
+              onPress={handleLogWorkout}
+              disabled={isSubmitting}
+            >
+              <Text style={styles.submitButtonText}>{isSubmitting ? "Saving..." : "Save Workout"}</Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </LinearGradient>
   );
 }
@@ -171,6 +228,42 @@ const styles = StyleSheet.create({
   containerDark: { backgroundColor: '#0f172a' },
   textPrimaryDark: { color: '#F8FAFC' },
   textSecondaryDark: { color: '#94A3B8' },
+  textPrimaryLight: { color: '#1E293B' },
+  textSecondaryLight: { color: '#64748B' },
   offlineBanner: { flexDirection: 'row', backgroundColor: "rgba(254, 243, 199, 0.8)", padding: 10, borderRadius: 8, alignItems: 'center', marginBottom: 15 },
-  offlineText: { color: "#d97706", fontSize: 13, fontWeight: 'bold' }
+  offlineText: { color: "#d97706", fontSize: 13, fontWeight: 'bold' },
+  
+  // Home button
+  logButton: { flexDirection: 'row', padding: 18, borderRadius: 16, marginTop: 20, alignItems: 'center', justifyContent: 'center', shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
+  logButtonDark: { backgroundColor: '#4CAF50' },
+  logButtonLight: { backgroundColor: '#0ea5e9' },
+  logButtonText: { color: '#FFF', fontSize: 18, fontWeight: 'bold' },
+
+  // Modal Styles
+  modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' },
+  modalContent: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 25, paddingBottom: 40 },
+  modalDark: { backgroundColor: '#1E1E1E' },
+  modalLight: { backgroundColor: '#FFFFFF' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  modalTitle: { fontSize: 22, fontWeight: 'bold' },
+  modalLabel: { fontSize: 14, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10, marginTop: 10 },
+  
+  // Chips στο Modal
+  chipContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 },
+  chip: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 20, borderWidth: 1, borderColor: '#333333' },
+  chipActiveDark: { backgroundColor: '#4CAF50', borderColor: '#4CAF50' },
+  chipActiveLight: { backgroundColor: '#0ea5e9', borderColor: '#0ea5e9' },
+  chipText: { color: '#94A3B8', fontWeight: '600' },
+  chipTextActive: { color: '#FFF', fontWeight: 'bold' },
+
+  // Text Input
+  input: { borderWidth: 1, borderRadius: 12, padding: 15, fontSize: 18, marginBottom: 30 },
+  inputDark: { backgroundColor: '#2C2C2C', borderColor: '#333333', color: '#FFF' },
+  inputLight: { backgroundColor: '#F1F5F9', borderColor: '#E2E8F0', color: '#1E293B' },
+
+  // Submit Button
+  submitButton: { padding: 18, borderRadius: 12, alignItems: 'center' },
+  submitButtonDark: { backgroundColor: '#4CAF50' },
+  submitButtonLight: { backgroundColor: '#0ea5e9' },
+  submitButtonText: { color: '#FFF', fontSize: 18, fontWeight: 'bold' },
 });

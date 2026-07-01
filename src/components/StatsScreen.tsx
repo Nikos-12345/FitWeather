@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, Dimensions, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { StyleSheet, Text, View, Dimensions, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LineChart } from 'react-native-chart-kit';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
+import { useFocusEffect } from '@react-navigation/native';
+import { getAuth } from 'firebase/auth';
+
+import { fetchWeeklyStats } from '../utils/dbService';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -14,12 +18,41 @@ export default function StatsScreen() {
   const categories = ['Cardio', 'Strength', 'Flexibility'];
   const [selectedCategory, setSelectedCategory] = useState(categories[0]);
 
-  const mockChartData = {
+  const [chartData, setChartData] = useState([0, 0, 0, 0, 0, 0, 0]);
+  const [stats, setStats] = useState({ totalMins: 0, longest: 0, workoutCount: 0 });
+  const [isloading, setIsLoading] = useState(true);
+
+  useFocusEffect(
+    useCallback(() => {
+      const loadData = async () => {
+        setIsLoading(true);
+        const auth = getAuth();
+        const user = auth.currentUser;
+
+        if (user) {
+          const result = await fetchWeeklyStats(user.uid, selectedCategory);
+          if (result) {
+            setChartData(result.weeklyData);
+            setStats({
+              totalMins: result.totalMins,
+              longest: result.longest,
+              workoutCount: result.workoutCount
+            });
+          }
+        }
+        setIsLoading(false);
+      };
+
+      loadData();
+    }, [selectedCategory])
+  );
+
+  const realChartData = {
     labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
     datasets: [
       {
-        data: [45, 60, 0, 50, 45, 90, 30],
-        color: (opacity = 1) => isDarkMode ? `rgba(76, 175, 80, ${opacity})` : `rgba(14, 165, 233, ${opacity})`, // Πράσινο (Dark) / Γαλάζιο (Light)
+        data: chartData,
+        color: (opacity = 1) => isDarkMode ? `rgba(76, 175, 80, ${opacity})` : `rgba(14, 165, 233, ${opacity})`, 
         strokeWidth: 3, 
       },
     ],
@@ -77,34 +110,48 @@ export default function StatsScreen() {
             </ScrollView>
           </View>
 
-          <View style={[styles.chartCard, isDarkMode ? styles.cardDark : styles.cardLight]}>
-            <Text style={[styles.chartTitle, isDarkMode ? styles.textLight : styles.textDark]}>
-              {selectedCategory} Volume (Mins)
-            </Text>
-            <LineChart
-              data={mockChartData}
-              width={screenWidth - 70}
-              height={220}
-              chartConfig={chartConfig}
-              bezier
-              style={styles.chartStyle}
-            />
-          </View>
+          {isloading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={isDarkMode ? "#4CAF50" : "#0ea5e9"} />
+            </View>
+          ) : (
+            <>
+            <View style={[styles.chartCard, isDarkMode ? styles.cardDark : styles.cardLight]}>
+              <Text style={[styles.chartTitle, isDarkMode ? styles.textLight : styles.textDark]}>
+                {selectedCategory} Volume (Mins)
+              </Text>
+              {Math.max(...chartData) === 0 ? (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyStateText}>No workouts logged for this category yet.</Text>
+                </View>
+              ) : (
+                <LineChart
+                  data={realChartData}
+                  width={screenWidth - 70}
+                  height={220}
+                  chartConfig={chartConfig}
+                  bezier
+                  style={styles.chartStyle}
+                />
+              )}
+            </View>
 
-          <View style={styles.summaryContainer}>
-            <View style={[styles.statBox, isDarkMode ? styles.cardDark : styles.cardLight]}>
-              <Text style={[styles.statValue, isDarkMode ? styles.valueDark : styles.valueLight]}>6</Text>
-              <Text style={styles.statLabel}>Workouts</Text>
+            <View style={styles.summaryContainer}>
+              <View style={[styles.statBox, isDarkMode ? styles.cardDark : styles.cardLight]}>
+                <Text style={[styles.statValue, isDarkMode ? styles.valueDark : styles.valueLight]}>{stats.workoutCount}</Text>
+                <Text style={styles.statLabel}>Workouts</Text>
+              </View>
+              <View style={[styles.statBox, isDarkMode ? styles.cardDark : styles.cardLight]}>
+                <Text style={[styles.statValue, isDarkMode ? styles.valueDark : styles.valueLight]}>{stats.totalMins}</Text>
+                <Text style={styles.statLabel}>Total Mins</Text>
+              </View>
+              <View style={[styles.statBox, isDarkMode ? styles.cardDark : styles.cardLight]}>
+                <Text style={[styles.statValue, isDarkMode ? styles.valueDark : styles.valueLight]}>{stats.longest}m</Text>
+                <Text style={styles.statLabel}>Longest</Text>
+              </View>
             </View>
-            <View style={[styles.statBox, isDarkMode ? styles.cardDark : styles.cardLight]}>
-              <Text style={[styles.statValue, isDarkMode ? styles.valueDark : styles.valueLight]}>320</Text>
-              <Text style={styles.statLabel}>Total Mins</Text>
-            </View>
-            <View style={[styles.statBox, isDarkMode ? styles.cardDark : styles.cardLight]}>
-              <Text style={[styles.statValue, isDarkMode ? styles.valueDark : styles.valueLight]}>90m</Text>
-              <Text style={styles.statLabel}>Longest</Text>
-            </View>
-          </View>
+            </>
+          )}
 
         </ScrollView>
       </SafeAreaView>
@@ -143,4 +190,7 @@ const styles = StyleSheet.create({
   valueDark: { color: '#4CAF50' },
   valueLight: { color: '#0ea5e9' },
   statLabel: { color: '#64748B', fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 'bold' },
+  loadingContainer: { height: 250, justifyContent: 'center', alignItems: 'center' },
+  emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 50},
+  emptyStateText: { color: '#64748b', fontSize: 14, fontStyle: 'italic' },
 });

@@ -7,14 +7,19 @@ import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from '@react-navigation/native';
 import { getAuth } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTranslation } from 'react-i18next';
 
 import { fetchWeeklyStats } from '../utils/dbService';
 
 const screenWidth = Dimensions.get('window').width;
 
 export default function StatsScreen() {
+  const { t } = useTranslation();
+  const [appTheme, setAppTheme] = useState('system');
   const currentHour = new Date().getHours();
-  const isDarkMode = currentHour >= 19 || currentHour < 7;
+  let isDarkMode = currentHour >= 19 || currentHour < 7;
+  if (appTheme === 'dark') isDarkMode = true;
+  if (appTheme === 'light') isDarkMode = false;
 
   const [categories, setCategories] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -44,6 +49,15 @@ export default function StatsScreen() {
   useFocusEffect(
     useCallback(() => {
       const loadData = async () => {
+        try {
+          const storedTheme = await AsyncStorage.getItem('@app_theme');
+          if (storedTheme) {
+            setAppTheme(storedTheme);
+          }
+        } catch (error) {
+          console.error("Error loading theme:", error);
+        }
+        
         if (!selectedCategory) return ;
         setIsLoading(true);
         const auth = getAuth();
@@ -76,7 +90,8 @@ export default function StatsScreen() {
   }
 
   const realChartData = {
-    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+    // Δυναμικές μέρες εβδομάδας
+    labels: [t('mon'), t('tue'), t('wed'), t('thu'), t('fri'), t('sat'), t('sun')],
     datasets: [
       {
         data: chartData,
@@ -111,8 +126,8 @@ export default function StatsScreen() {
         <StatusBar style={isDarkMode ? "light" : "dark"} />
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           
-          <Text style={[styles.title, isDarkMode ? styles.textLight : styles.textDark]}>Your Progress</Text>
-          <Text style={styles.subtitle}>Track your daily grind and volume.</Text>
+          <Text style={[styles.title, isDarkMode ? styles.textLight : styles.textDark]}>{t('your_progress')}</Text>
+          <Text style={styles.subtitle}>{t('track_grind')}</Text>
 
           <View style={styles.filterContainer}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -146,11 +161,11 @@ export default function StatsScreen() {
             <>
             <View style={[styles.chartCard, isDarkMode ? styles.cardDark : styles.cardLight]}>
               <Text style={[styles.chartTitle, isDarkMode ? styles.textLight : styles.textDark]}>
-                {selectedCategory} Volume (Mins)
+                {selectedCategory} {t('volume_mins')}
               </Text>
               {Math.max(...chartData) === 0 ? (
                 <View style={styles.emptyState}>
-                  <Text style={styles.emptyStateText}>No workouts logged for this category yet.</Text>
+                  <Text style={styles.emptyStateText}>{t('no_workouts_category')}</Text>
                 </View>
               ) : (
                 <LineChart
@@ -167,15 +182,15 @@ export default function StatsScreen() {
             <View style={styles.summaryContainer}>
               <View style={[styles.statBox, isDarkMode ? styles.cardDark : styles.cardLight]}>
                 <Text style={[styles.statValue, isDarkMode ? styles.valueDark : styles.valueLight]}>{stats.workoutCount}</Text>
-                <Text style={styles.statLabel}>Workouts</Text>
+                <Text style={styles.statLabel}>{t('workouts_count')}</Text>
               </View>
               <View style={[styles.statBox, isDarkMode ? styles.cardDark : styles.cardLight]}>
                 <Text style={[styles.statValue, isDarkMode ? styles.valueDark : styles.valueLight]}>{stats.totalMins}m</Text>
-                <Text style={styles.statLabel}>Total Mins</Text>
+                <Text style={styles.statLabel}>{t('total_mins_label')}</Text>
               </View>
               <View style={[styles.statBox, isDarkMode ? styles.cardDark : styles.cardLight]}>
                 <Text style={[styles.statValue, isDarkMode ? styles.valueDark : styles.valueLight]}>{stats.longest}m</Text>
-                <Text style={styles.statLabel}>Longest</Text>
+                <Text style={styles.statLabel}>{t('longest_label')}</Text>
               </View>
             </View>
             </>
@@ -213,12 +228,12 @@ const styles = StyleSheet.create({
   chartStyle: { borderRadius: 16 },
 
   summaryContainer: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
-  statBox: { flex: 1, padding: 15, borderRadius: 16, alignItems: 'center', borderWidth: 1 },
-  statValue: { fontSize: 26, fontWeight: '900', marginBottom: 5 },
+  statBox: { flex: 1, paddingVertical: 15, paddingHorizontal: 5, borderRadius: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 1 }, 
+  statValue: { fontSize: 24, fontWeight: '900', marginBottom: 5 }, 
   valueDark: { color: '#4CAF50' },
   valueLight: { color: '#0ea5e9' },
-  statLabel: { color: '#64748B', fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 'bold' },
+  statLabel: { color: '#64748B', fontSize: 10, textTransform: 'uppercase', fontWeight: 'bold', textAlign: 'center' }, 
   loadingContainer: { height: 250, justifyContent: 'center', alignItems: 'center' },
   emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 50},
-  emptyStateText: { color: '#64748b', fontSize: 14, fontStyle: 'italic' },
+  emptyStateText: { color: '#64748b', fontSize: 14, fontStyle: 'italic', textAlign: 'center' },
 });

@@ -33,7 +33,7 @@ const styles = StyleSheet.create({
   cardDark: { backgroundColor: '#1e293b', shadowColor: '#000000', shadowOpacity: 0.3 },
   iconCircle: { backgroundColor: '#dfeaeb', width: 60, height: 60, borderRadius: 30, justifyContent: 'center', alignItems: 'center', marginBottom: 15 },
   iconCircleDark: { backgroundColor: '#334155' },
-  verdictTitle: { color: '#64748B', fontSize: 14, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 },
+  verdictTitle: { color: '#64748B', fontSize: 14, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, textAlign: 'center' },
   verdictText: { color: '#0F172A', fontSize: 22, fontWeight: '800', textAlign: 'center', lineHeight: 30 },
   textPrimaryDark: { color: '#F8FAFC' },
   textSecondaryDark: { color: '#94A3B8' },

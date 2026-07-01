@@ -1,9 +1,15 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import i18n from "i18next";
 
 const API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(API_KEY || '');
 
 export async function generateAIVerdict(currentWeather: any, forecastData: any, userProfile?: any): Promise<string> {
+    /*if (i18n.language === 'el') {
+    return "Αυτή είναι μια δοκιμαστική συμβουλή από τον AI Coach για εξοικονόμηση αιτημάτων API. Ο καιρός φαίνεται ιδανικός, συνέχισε τη σκληρή δουλειά!";
+  }
+    return "This is a mock AI Coach advice to save API requests during development. The weather looks solid, keep grinding!";
+    */
     try {
         if (!API_KEY) {
             throw new Error("Missing Gemini API key in environment variables.");
@@ -41,7 +47,7 @@ export async function generateAIVerdict(currentWeather: any, forecastData: any, 
           6. Do not use any markdown formatting at all (no asterisks **, hashtags, or bold text). Return ONLY clean, raw text.
         `;
 
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
         
         const result = await model.generateContent(promt);
         return result.response.text();

@@ -1,56 +1,59 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 interface WeatherStatsProps {
-    temperature: number;
-    description: string;
-    windSpeedKmH: number;
-    humidity: number;
-    isDarkMode: boolean;
+  temperature: number;
+  description: string;
+  windSpeedKmH: number;
+  humidity: number;
+  isDarkMode: boolean;
 }
 
-export const WetaherStats = ({ temperature, description, windSpeedKmH, humidity, isDarkMode }: WeatherStatsProps) => {
-    return (
-        <View>
-          {/* Live Weather Details section*/}
-          <View style={[styles.card, isDarkMode && styles.cardDark, styles.mainWeatherCard]}>
-            <Ionicons name={isDarkMode ? "moon" : "partly-sunny"} size={50} color={isDarkMode ? "#818CF8" : "#f59e0b"} />
-            <View style={styles.mainWeatherTextWrapper}> 
-              <Text style={[styles.mainTemperature, isDarkMode && styles.textPrimaryDark]}>{Math.round(temperature)}°C</Text>
-              <Text style={[styles.mainCondition, isDarkMode && styles.textSecondaryDark]}>{description}</Text>
-            </View>
-          </View>
+export const WeatherStats = ({ temperature, description, windSpeedKmH, humidity, isDarkMode }: WeatherStatsProps) => {
+  const { t } = useTranslation();
 
-          {/* Additional Live Weather Details */}
-          <Text style={[styles.sectionTitle, isDarkMode && styles.textPrimaryDark]}>Weather conditions</Text>
-        
-          <View style={styles.row}>
-            {/* UV Index */}
-            <View style={[styles.card, isDarkMode && styles.cardDark, styles.smallCard]}>
-              <Ionicons name="sunny-outline" size={24} color="#8B5CF6" />
-              <Text style={[styles.statLabel, isDarkMode && styles.textSecondaryDark]}>UV Index</Text>
-              <Text style={[styles.statValue, isDarkMode && styles.textPrimaryDark]}>-</Text>
-            </View>
-        
-            {/* Wind Speed */}
-            <View style={[styles.card, isDarkMode && styles.cardDark, styles.smallCard]}>
-              <Ionicons name="speedometer-outline" size={24} color="#0ea5e9" />
-              <Text style={[styles.statLabel, isDarkMode && styles.textSecondaryDark]}>Wind Speed</Text>
-              <Text style={[styles.statValue, isDarkMode && styles.textPrimaryDark]}>{windSpeedKmH} <Text style={styles.unitText}>Km/h</Text></Text>
-            </View>
-          </View>
-        
-          {/* Humidity */}
-          <View style={[styles.card, isDarkMode && styles.cardDark, styles.wideCard]}> 
-            <View style={styles.wideCardLeft}>
-              <Ionicons name="water-outline" size={24} color="#10b981" />
-              <Text style={[styles.wideCardLabel, isDarkMode && styles.textSecondaryDark]}>Humidity</Text>
-            </View>
-            <Text style={[styles.statValue, isDarkMode && styles.textPrimaryDark]}>{humidity}%</Text>
-          </View>
+  return (
+    <View>
+      {/* Live Weather Details section*/}
+      <View style={[styles.card, isDarkMode && styles.cardDark, styles.mainWeatherCard]}>
+        <Ionicons name={isDarkMode ? "moon" : "partly-sunny"} size={50} color={isDarkMode ? "#818CF8" : "#f59e0b"} />
+        <View style={styles.mainWeatherTextWrapper}> 
+          <Text style={[styles.mainTemperature, isDarkMode && styles.textPrimaryDark]}>{Math.round(temperature)}°C</Text>
+          <Text style={[styles.mainCondition, isDarkMode && styles.textSecondaryDark]}>{description}</Text>
         </View>
-    );
+      </View>
+
+      {/* Additional Live Weather Details */}
+      <Text style={[styles.sectionTitle, isDarkMode && styles.textPrimaryDark]}>{t('weather_conditions')}</Text>
+    
+      <View style={styles.row}>
+        {/* UV Index */}
+        <View style={[styles.card, isDarkMode && styles.cardDark, styles.smallCard]}>
+          <Ionicons name="sunny-outline" size={24} color="#8B5CF6" />
+          <Text style={[styles.statLabel, isDarkMode && styles.textSecondaryDark]}>{t('uv_index')}</Text>
+          <Text style={[styles.statValue, isDarkMode && styles.textPrimaryDark]}>-</Text>
+        </View>
+    
+        {/* Wind Speed */}
+        <View style={[styles.card, isDarkMode && styles.cardDark, styles.smallCard]}>
+          <Ionicons name="speedometer-outline" size={24} color="#0ea5e9" />
+          <Text style={[styles.statLabel, isDarkMode && styles.textSecondaryDark]}>{t('wind_speed')}</Text>
+          <Text style={[styles.statValue, isDarkMode && styles.textPrimaryDark]}>{windSpeedKmH} <Text style={styles.unitText}>Km/h</Text></Text>
+        </View>
+      </View>
+    
+      {/* Humidity */}
+      <View style={[styles.card, isDarkMode && styles.cardDark, styles.wideCard]}> 
+        <View style={styles.wideCardLeft}>
+          <Ionicons name="water-outline" size={24} color="#10b981" />
+          <Text style={[styles.wideCardLabel, isDarkMode && styles.textSecondaryDark]}>{t('humidity')}</Text>
+        </View>
+        <Text style={[styles.statValue, isDarkMode && styles.textPrimaryDark]}>{humidity}%</Text>
+      </View>
+    </View>
+  );
 };
 
 const styles = StyleSheet.create({

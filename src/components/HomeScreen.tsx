@@ -27,9 +27,8 @@ export default function HomeScreen() {
   const [isModalVisible, setModalVisible] = useState(false);
   const [workoutDuration, setWorkoutDuration] = useState('');
   const [selectedLogCategory, setSelectedLogCategory] = useState('Cardio');
+  const [customActivity, setCustomActivity] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  const logCategories = ['Cardio', 'Strength', 'Flexibility', 'Functional', 'Other'];
 
   const currentHour = new Date().getHours();
   const isDarkMode = currentHour >= 19 || currentHour < 7;
@@ -39,7 +38,11 @@ export default function HomeScreen() {
       try {
         const storedProfile = await AsyncStorage.getItem('@user_profile');
         if (storedProfile) {
-          setUserProfile(JSON.parse(storedProfile));
+          const parsedProfile = JSON.parse(storedProfile);
+          setUserProfile(parsedProfile);
+          if (parsedProfile.selectedWorkouts && parsedProfile.selectedWorkouts.length > 0) {
+            setSelectedLogCategory(parsedProfile.selectedWorkouts[0]);
+          }
         }
       } catch (e) {
         console.error("Error loading profile in HomeScreen:", e);
@@ -88,6 +91,22 @@ export default function HomeScreen() {
       return;
     }
 
+    let finalActivity = selectedLogCategory;
+    if (selectedLogCategory === 'Other') {
+      if (!customActivity.trim()) {
+        Alert.alert('Missing Info', 'Please type th name of your activity.');
+        return ;
+    }
+    finalActivity = customActivity.trim();
+
+    if (userProfile && !userProfile.selectedWorkouts.includes(finalActivity)) {
+      const updatedProfile = { ...userProfile};
+      updatedProfile.selectedWorkouts.push(finalActivity);
+      await AsyncStorage.setItem('@user_profile', JSON.stringify(updatedProfile));
+      setUserProfile(updatedProfile);
+      }
+    }
+
     setIsSubmitting(true);
     const auth = getAuth();
     const user = auth.currentUser;
@@ -98,6 +117,7 @@ export default function HomeScreen() {
         Alert.alert('Success!', 'Workout logged. Keep grinding!');
         setModalVisible(false);
         setWorkoutDuration(''); 
+        setCustomActivity('');
       } else {
         Alert.alert('Error', 'Could not save the workout. Try again.');
       }
@@ -124,6 +144,9 @@ export default function HomeScreen() {
     ? ['#0f172a', '#1e1b4b', '#020617'] 
     : ['#e0f2fe', '#f8fafc', '#fae8ff'];
 
+  const userActivities = userProfile?.selectedWorkouts || [];
+  const displayActivities = [...userActivities, 'Other'];
+
   return (
     <LinearGradient colors={backgroundColors} style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -149,8 +172,8 @@ export default function HomeScreen() {
               </View>
             )}
 
-            <VerdictCard verdict={verdict} isDarkMode={isDarkMode} />
             <WetaherStats temperature={weather.main.temp} description={weather.weather[0].description} windSpeedKmH={windSpeedKmH} humidity={weather.main.humidity} isDarkMode={isDarkMode} />
+            <VerdictCard verdict={verdict} isDarkMode={isDarkMode} />
 
             {/* Add a workout button */}
             <TouchableOpacity 
@@ -179,16 +202,30 @@ export default function HomeScreen() {
 
             <Text style={[styles.modalLabel, isDarkMode ? styles.textSecondaryDark : styles.textSecondaryLight]}>1. Select Category</Text>
             <View style={styles.chipContainer}>
-              {logCategories.map(cat => (
+              {displayActivities.map((activity, index) => (
                 <TouchableOpacity 
-                  key={cat} 
-                  style={[styles.chip, selectedLogCategory === cat && (isDarkMode ? styles.chipActiveDark : styles.chipActiveLight)]}
-                  onPress={() => setSelectedLogCategory(cat)}
+                  key={`${activity}-${index}`} 
+                  style={[styles.chip, selectedLogCategory === activity && (isDarkMode ? styles.chipActiveDark : styles.chipActiveLight)]}
+                  onPress={() => setSelectedLogCategory(activity)}
                 >
-                  <Text style={[styles.chipText, selectedLogCategory === cat && styles.chipTextActive]}>{cat}</Text>
+                  <Text style={[styles.chipText, selectedLogCategory === activity && styles.chipTextActive]}>{activity}</Text>
                 </TouchableOpacity>
               ))}
             </View>
+
+            {/* If Other is selected */}
+            {selectedLogCategory === 'Other' && (
+              <View style={styles.customActivityContainer}>
+                <Text style={[styles.modalLabel, isDarkMode ? styles.textSecondaryDark : styles.textSecondaryLight]}>Custom Activity Name</Text>
+                <TextInput
+                  style={[styles.input, isDarkMode ? styles.inputDark : styles.inputLight, { marginBottom: 15 }]}
+                  placeholder="e.g. Surfing"
+                  placeholderTextColor="#94A3B8"
+                  value={customActivity}
+                  onChangeText={setCustomActivity}
+                />
+              </View>
+            )}
 
             <Text style={[styles.modalLabel, isDarkMode ? styles.textSecondaryDark : styles.textSecondaryLight]}>2. Duration (Minutes)</Text>
             <TextInput
@@ -255,6 +292,8 @@ const styles = StyleSheet.create({
   chipActiveLight: { backgroundColor: '#0ea5e9', borderColor: '#0ea5e9' },
   chipText: { color: '#94A3B8', fontWeight: '600' },
   chipTextActive: { color: '#FFF', fontWeight: 'bold' },
+
+  customActivityContainer: { marginBottom: 10 },
 
   // Text Input
   input: { borderWidth: 1, borderRadius: 12, padding: 15, fontSize: 18, marginBottom: 30 },

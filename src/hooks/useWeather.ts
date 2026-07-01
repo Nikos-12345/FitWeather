@@ -6,7 +6,6 @@ import DefaultPreference from 'react-native-default-preference';
 
 // Actual API key for OpenWeatherMap
 const API_KEY = process.env.EXPO_PUBLIC_WEATHER_API_KEY;
-//console.log("The API KEY that i send is:", JSON.stringify(API_KEY));
 
 // TypeScript interface for weather data
 interface WeatherData {

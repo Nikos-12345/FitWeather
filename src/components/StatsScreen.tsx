@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { StyleSheet, Text, View, Dimensions, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LineChart } from 'react-native-chart-kit';
@@ -6,6 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from '@react-navigation/native';
 import { getAuth } from 'firebase/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { fetchWeeklyStats } from '../utils/dbService';
 
@@ -15,16 +16,35 @@ export default function StatsScreen() {
   const currentHour = new Date().getHours();
   const isDarkMode = currentHour >= 19 || currentHour < 7;
 
-  const categories = ['Cardio', 'Strength', 'Flexibility'];
-  const [selectedCategory, setSelectedCategory] = useState(categories[0]);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
 
   const [chartData, setChartData] = useState([0, 0, 0, 0, 0, 0, 0]);
   const [stats, setStats] = useState({ totalMins: 0, longest: 0, workoutCount: 0 });
   const [isloading, setIsLoading] = useState(true);
 
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const storedProfile = await AsyncStorage.getItem('@user_profile');
+        if (storedProfile) {
+          const parsed = JSON.parse(storedProfile);
+          if (parsed.selectedWorkouts && parsed.selectedWorkouts.length > 0) {
+            setCategories(parsed.selectedWorkouts);
+            setSelectedCategory(parsed.selectedWorkouts[0]);
+          }
+      }
+      } catch (error) {
+        console.error("Error loading categories:", error);
+      }
+    };
+    loadCategories();
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       const loadData = async () => {
+        if (!selectedCategory) return ;
         setIsLoading(true);
         const auth = getAuth();
         const user = auth.currentUser;
@@ -46,6 +66,14 @@ export default function StatsScreen() {
       loadData();
     }, [selectedCategory])
   );
+
+  if (categories.length === 0) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={isDarkMode ? "#4CAF50" : "#0ea5e9"} />
+      </View>
+    );
+  }
 
   const realChartData = {
     labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
@@ -88,9 +116,9 @@ export default function StatsScreen() {
 
           <View style={styles.filterContainer}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {categories.map((cat) => (
+              {categories.map((cat, index) => (
                 <TouchableOpacity
-                  key={cat}
+                  key={`${cat}-${index}`}
                   style={[
                     styles.filterChip, 
                     isDarkMode ? styles.filterChipDark : styles.filterChipLight,
@@ -142,7 +170,7 @@ export default function StatsScreen() {
                 <Text style={styles.statLabel}>Workouts</Text>
               </View>
               <View style={[styles.statBox, isDarkMode ? styles.cardDark : styles.cardLight]}>
-                <Text style={[styles.statValue, isDarkMode ? styles.valueDark : styles.valueLight]}>{stats.totalMins}</Text>
+                <Text style={[styles.statValue, isDarkMode ? styles.valueDark : styles.valueLight]}>{stats.totalMins}m</Text>
                 <Text style={styles.statLabel}>Total Mins</Text>
               </View>
               <View style={[styles.statBox, isDarkMode ? styles.cardDark : styles.cardLight]}>
